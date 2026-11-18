@@ -72,10 +72,14 @@ Run `python3 gc553g2.py --help` or append `--help` to a command for its argument
 
 The utility supports temporary receiver EDID changes. Permanent custom EDID profiles and firmware updates are outside the current feature set.
 
+## OBS testing
+
+The [OBS Linux V4L2 test bundle](testing/obs-v4l2/README.md) includes the frame-rate fix, MJPEG recovery, and experimental hardware decoding patches for OBS Studio 33.0.1. It includes build steps and a smoke test. The patches work with the V4L2 input module and are maintained as an independent patch series.
+
 ## Author
 
 Accola
 
 ## License
 
-[MIT](LICENSE)
+The GC553G2 utility and its documentation are licensed under [MIT](LICENSE). The OBS test bundle is licensed under [GPL-2.0-or-later](testing/obs-v4l2/COPYING).
