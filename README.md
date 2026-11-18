@@ -2,7 +2,7 @@
 
 Command-line utility for the **AVerMedia Live Gamer ULTRA 2.1 (GC553G2)** on Linux. Discover capture modes, enable high-frame-rate MJPEG, inspect HDMI and EDID, and control device audio and RGB. The utility works with the Linux `uvcvideo` and `snd-usb-audio` drivers and prints JSON that can be used in scripts.
 
-[Deutsche Anleitung](docs/Anleitung.md)
+[English guide](docs/Guide.md) · [Deutsche Anleitung](docs/Anleitung.md)
 
 ## Requirements
 
@@ -56,7 +56,7 @@ sudo python3 gc553g2.py rgb 0000ff --brightness 30
 sudo python3 gc553g2.py rgb autonomous
 ```
 
-Run `python3 gc553g2.py --help` or append `--help` to a command for its arguments. The [German guide](docs/Anleitung.md) includes temporary EDID and restore examples. The HDMI source must be off before writing the receiver EDID.
+Run `python3 gc553g2.py --help` or append `--help` to a command for its arguments. The [full guide](docs/Guide.md#edid-backup-preview-and-restoration) includes temporary EDID and restore examples. The HDMI source must be off before writing the receiver EDID.
 
 ## Validation
 

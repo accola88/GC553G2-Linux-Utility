@@ -1,5 +1,7 @@
 # AVerMedia Live Gamer Ultra 2.1 unter Linux
 
+[English](Guide.md) · [Projekt-README](../README.md)
+
 Die GC553G2 (`07ca:2553`) verwendet die Linux-Treiber `uvcvideo` und
 `snd-usb-audio`. Die CLI benötigt Python 3.8 oder neuer, libusb 1.0 und
 `v4l2-ctl`. Sie findet die Karte über sysfs anhand ihrer USB-ID und ermittelt
