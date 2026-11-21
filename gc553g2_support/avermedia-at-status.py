@@ -102,6 +102,13 @@ def set_hdr_to_sdr(usb, handle, enabled):
     write_setting(usb, handle, 0x1F, data, (data, int(enabled).to_bytes(4, 'little')))
 
 
+def set_auto_vrr(usb, handle, enabled):
+    reply = exchange(usb, handle, request_packet(0x89, bytes([enabled])))
+    expected = int(enabled).to_bytes(4, 'little')
+    if decode_response(reply, allow_short=True) != expected:
+        raise RuntimeError(f"Auto-VRR acknowledgement did not echo the requested setting (response: {reply['response_hex']})")
+
+
 def set_audio_gain(usb, handle, channel, gain):
     _, command, size, minimum, maximum = AUDIO_GAINS[channel]
     if not minimum <= gain <= maximum:

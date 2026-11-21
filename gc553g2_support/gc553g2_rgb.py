@@ -1,5 +1,6 @@
-"""Control the GC553G2's standard HID LampArray interface on Linux."""
+"""Control the GC553G2's standard and vendor HID lighting interfaces."""
 
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import os
@@ -10,9 +11,27 @@ import time
 
 HIDRAW = Path("/sys/class/hidraw")
 LAMP_DESCRIPTOR_SHA256 = "82475fa450cf24b689ecebcf0b342470412c19ac4f1970ff6a4fad66840b6d39"
+NATIVE_DESCRIPTOR_SHA256 = "6dd103e16388da723b868d3e425b031cfcc777f5e7c3653dc9c6ca0ece6acccd"
+NATIVE_EFFECTS = {
+    "static": 0x01,
+    "breathing": 0x02,
+    "blinking": 0x03,
+    "cycle": 0x04,
+    "rainbow": 0x05,
+    "rainbow-breath": 0x06,
+    "comet": 0x07,
+    "rainbow-comet": 0x08,
+    "dancing-flash": 0x09,
+    "rainbow-flash": 0x0A,
+    "wave": 0x0B,
+    "glowing-yoyo": 0x0C,
+    "starry-night": 0x0D,
+    "flashing": 0x0F,
+    "rainbow-wave": 0x10,
+}
 
 
-def find_lamp_node(device):
+def find_rgb_node(device, descriptor_sha256, interface_name):
     serial = (device / "serial").read_text().strip()
     if not serial:
         raise RuntimeError("GC553G2 USB serial is required to match the RGB interface")
@@ -26,13 +45,25 @@ def find_lamp_node(device):
             if attributes.get("HID_UNIQ") != serial:
                 continue
             descriptor = (hid / "report_descriptor").read_bytes()
-            if hashlib.sha256(descriptor).hexdigest() == LAMP_DESCRIPTOR_SHA256:
+            if hashlib.sha256(descriptor).hexdigest() == descriptor_sha256:
                 matches.append(node)
         except FileNotFoundError:
             continue
     if len(matches) != 1:
-        raise RuntimeError("Expected one recognized GC553G2 LampArray interface for this USB serial")
+        raise RuntimeError(f"Expected one recognized GC553G2 {interface_name} interface for this USB serial")
     return matches[0]
+
+
+@contextmanager
+def open_rgb_node(node):
+    path = Path("/dev") / node.name
+    devno = tuple(map(int, (node / "dev").read_text().strip().split(":")))
+    with path.open("r+b", buffering=0) as file:
+        fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        actual = os.fstat(file.fileno()).st_rdev
+        if (os.major(actual), os.minor(actual)) != devno:
+            raise RuntimeError("RGB device changed while opening its HID interface")
+        yield path, file
 
 
 def feature_report(file, report, *, read=False):
@@ -82,14 +113,8 @@ def lamp_array(device, mode, brightness=None):
             raise ValueError("RGB brightness must be from 0 to 100")
     else:
         brightness = 100
-    node = find_lamp_node(device)
-    path = Path("/dev") / node.name
-    devno = tuple(map(int, (node / "dev").read_text().strip().split(":")))
-    with path.open("r+b", buffering=0) as file:
-        fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        actual = os.fstat(file.fileno()).st_rdev
-        if (os.major(actual), os.minor(actual)) != devno:
-            raise RuntimeError("RGB device changed while opening its HID interface")
+    node = find_rgb_node(device, LAMP_DESCRIPTOR_SHA256, "LampArray")
+    with open_rgb_node(node) as (path, file):
         attributes = feature_report(file, b"\x01" + bytes(22), read=True)
         count, _, _, _, kind, delay_us = struct.unpack_from("<HIIIII", attributes, 1)
         if not 1 <= count <= 256:
@@ -112,3 +137,11 @@ def lamp_array(device, mode, brightness=None):
             feature_report(file, report)
     return {**result, "autonomous": False, "rgb_requested": "#" + rgb.hex(),
             "brightness_percent": brightness}
+
+
+def set_native_effect(device, effect):
+    node = find_rgb_node(device, NATIVE_DESCRIPTOR_SHA256, "native RGB")
+    report = bytes([0x75, 0x20, 0x00, NATIVE_EFFECTS[effect], 0x04, 0x01, 0x05, 0x01]) + bytes(24)
+    with open_rgb_node(node) as (path, file):
+        feature_report(file, report)
+    return {"hidraw": str(path), "effect_requested": effect, "report_sent": True}

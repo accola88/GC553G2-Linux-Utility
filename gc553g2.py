@@ -15,7 +15,7 @@ import signal
 import struct
 import subprocess
 import time
-from gc553g2_support.gc553g2_rgb import lamp_array
+from gc553g2_support.gc553g2_rgb import NATIVE_EFFECTS, lamp_array, set_native_effect
 
 spec = importlib.util.spec_from_file_location(
     "gc553g2_protocol", Path(__file__).with_name("gc553g2_support") / "avermedia-4k144.py"
@@ -263,6 +263,8 @@ def decode_hdmi_timing(data):
         "height": height * 2 if interlaced else height,
         "refresh_hz": refresh_hz,
         "interlaced": interlaced,
+        # AT replies have a four-byte header. Wire byte 22 is payload byte 18.
+        "hdr_detected": bool(data[18] & 0x10),
     }
 
 
@@ -856,6 +858,15 @@ def configure_switch(device, target, *, command, write, key):
     return {**identity(device), key: target if changed else before, "changed": changed}
 
 
+def set_auto_vrr(device, enabled):
+    with video_control(device) as (usb, handle):
+        firmware = read_firmware(usb, handle)
+        if firmware != SUPPORTED_WRITE_FIRMWARE:
+            raise RuntimeError(f"Auto-VRR writes are limited to firmware {SUPPORTED_WRITE_FIRMWARE}, found {firmware}")
+        at.set_auto_vrr(usb, handle, enabled)
+    return {**identity(device), "auto_vrr_requested": enabled, "device_echo_verified": True}
+
+
 def configure(device, target):
     before = snapshot(device)
     with video_control(device) as (usb, handle):
@@ -885,7 +896,7 @@ def main():
     commands.add_parser("devices", help="List connected GC553G2 cards with their USB ports")
     for name in ("formats", "status", "enable", "disable"):
         commands.add_parser(name)
-    hdmi = commands.add_parser("hdmi-status", help="Read HDMI input timing and the EDID mode code")
+    hdmi = commands.add_parser("hdmi-status", help="Read HDMI input timing, HDR detection and the EDID mode code")
     hdmi.add_argument("--raw", action="store_true", help="Include USB replies even when HDMI input is stable")
     hdmi_preset_command = commands.add_parser("hdmi-preset", help="Read or set the HDMI compatibility preset")
     hdmi_preset_command.add_argument("preset", nargs="?", choices=HDMI_PRESETS, help="Setting a preset restarts the card")
@@ -894,6 +905,8 @@ def main():
     tone = commands.add_parser("hdr-to-sdr", help="Read or set the HDR-to-SDR device setting")
     tone.add_argument("mode", nargs="?", choices=("on", "off"))
     commands.add_parser("hdr-metadata", help="Read the receiver's raw HDR metadata")
+    vrr = commands.add_parser("auto-vrr", help="Set the card's Automatic VRR option and check its reply")
+    vrr.add_argument("mode", choices=("on", "off"))
     audio = commands.add_parser("audio", help="Read audio diagnostics or set one mixer gain")
     audio.add_argument("channel", nargs="?", choices=at.AUDIO_GAINS)
     audio.add_argument("gain", nargs="?", type=int)
@@ -904,6 +917,8 @@ def main():
     rgb = commands.add_parser("rgb", help="Read LampArray attributes, set a solid color or restore autonomous lighting")
     rgb.add_argument("mode", nargs="?", default="status", help="status, autonomous, or RRGGBB")
     rgb.add_argument("--brightness", type=int, metavar="0..100", help="Brightness percentage for a solid color (default 100)")
+    effect = commands.add_parser("rgb-effect", help="Send one of the card's native lighting presets")
+    effect.add_argument("effect", choices=NATIVE_EFFECTS)
     commands.add_parser("edid-table", help="Read the EDID table stored for the selected HDMI preset")
     commands.add_parser("edid-live", help="Read the EDID table from the HDMI input receiver")
     for name, help_text in (
@@ -957,6 +972,8 @@ def main():
             result = select_capture(device, args.width, args.height, args.format, args.fps, args.test_frames)
         elif args.command == "rgb":
             result = {**identity(device), **lamp_array(device, args.mode, args.brightness)}
+        elif args.command == "rgb-effect":
+            result = {**identity(device), **set_native_effect(device, args.effect)}
         else:
             if os.geteuid():
                 raise RuntimeError("Close capture applications and run this command with sudo")
@@ -973,6 +990,8 @@ def main():
                     result = hdr_to_sdr(device, {None: None, "on": True, "off": False}[args.mode])
                 elif args.command == "hdr-metadata":
                     result = hdr_metadata(device)
+                elif args.command == "auto-vrr":
+                    result = set_auto_vrr(device, args.mode == "on")
                 elif args.command == "audio":
                     result = audio_mixer(device, args.channel, args.gain)
                 elif args.command == "audio-bitstream":

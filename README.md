@@ -11,7 +11,7 @@ Command-line utility for the **AVerMedia Live Gamer ULTRA 2.1 (GC553G2)** on Lin
 - Access to the V4L2 device. Most device-specific commands require root. RGB requires access to the corresponding `hidraw` device.
 - A 10 Gbit/s USB connection for the tested 4K120 capture mode
 
-Device-specific writes are limited to firmware **1.0.10.2**. The RGB command identifies the standard LampArray interface by the card's serial number and a known HID descriptor.
+USB video control writes are limited to firmware **1.0.10.2**. The RGB commands match the card's serial number and recognize the HID descriptor for their respective interface.
 
 ## Quick start
 
@@ -41,13 +41,15 @@ Close capture applications before commands that access the device's USB controls
 | Command | Purpose |
 |---|---|
 | `status`, `enable`, `disable` | Inspect or switch the USB capture mode |
-| `hdmi-status`, `hdmi-preset` | Read HDMI input timing and inspect or select a compatibility preset |
+| `hdmi-status`, `hdmi-preset` | Read HDMI input timing and HDR status, or inspect and select a compatibility preset |
 | `edid`, `edid-table`, `edid-backup` | Select Merge, Copy, or Internal EDID mode and read or back up stored tables |
 | `edid-live`, `edid-live-set`, `edid-live-restore` | Inspect, temporarily change, or restore the HDMI receiver's EDID |
 | `hdr-metadata`, `hdr-to-sdr` | Read HDMI HDR metadata and inspect or set the card's HDR-to-SDR flag |
+| `auto-vrr {on,off}` | Set Automatic VRR and check the device's acknowledgement |
 | `audio`, `audio-bitstream` | Read or adjust mixer gains and inspect or set non-PCM audio over USB |
 | `hdcp-detection` | Inspect or set the device's HDCP detection option |
 | `rgb` | Read the LampArray, set a solid color, or restore the device lighting effect |
+| `rgb-effect` | Select one of 15 native lighting presets |
 
 ```sh
 sudo python3 gc553g2.py hdmi-status
@@ -67,8 +69,9 @@ Run `python3 gc553g2.py --help` or append `--help` to a command for its argument
 | 4K144 MJPEG | Advertised by V4L2 when enabled. Capture from a 4K144 HDMI source remains unverified. |
 | EDID | Merge and Internal switching, temporary receiver EDID write, and byte-for-byte restoration verified |
 | Audio and HDCP | Stereo USB capture, HDMI gain write and readback, non-PCM switch, and HDCP detection switch verified. Hardware Dolby Digital 5.1 and analog party chat remain unverified. |
-| HDR | PQ input detected. The HDR-to-SDR flag switched successfully, but had no measurable effect on captured luma in the tested NV12 and P010 modes. |
-| RGB | Solid blue and the device lighting effect verified. Brightness scaling tested with simulated HID reports. |
+| HDR | The PS5's HDMI input switched between HDR and SDR in the USB trace. The HDR-to-SDR flag switched successfully, with no measurable change in captured luma in the tested NV12 and P010 modes. |
+| Auto-VRR | On/off commands and acknowledgements observed in the Windows USB trace. Linux switching and HDMI VRR still need a hardware check. |
+| RGB | Solid blue and return to the device lighting effect verified. Brightness scaling tested with simulated HID reports. The 15 native preset commands match the Windows USB trace and still need a Linux hardware check. |
 
 The utility supports temporary receiver EDID changes. Permanent custom EDID profiles and firmware updates are outside the current feature set.
 

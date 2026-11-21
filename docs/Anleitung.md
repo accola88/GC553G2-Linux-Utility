@@ -110,6 +110,10 @@ und das dauerhafte Schreiben der gespeicherten HDMI-Presets sind offen.
 Dauerhafte Presets laufen in der Originalsoftware über Realteks
 Programmiermodus. Firmware-Updates sind außerhalb des Projektumfangs.
 
+`sudo python3 gc553g2.py hdmi-status` zeigt bei stabilem Eingangssignal
+unter `hdmi_input.hdr_detected` das HDR-Statusbit an. Der USB-Mitschnitt
+zeigt den Wechsel des Bits bei der Umschaltung zwischen HDR und SDR an der PS5.
+
 `sudo python3 gc553g2.py hdr-to-sdr` liest den Geräteschalter aus.
 Die optionale Angabe `on` oder `off` setzt ihn auf Firmware 1.0.10.2
 und liest den Wert zurück. Das Umschalten von Aus auf Ein und zurück
@@ -120,6 +124,15 @@ Schalterstellungen Rec.709. `sudo python3 gc553g2.py hdr-metadata`
 fragt die HDR-Metadaten des HDMI-Empfängers ab und zeigt bei einem
 erkannten InfoFrame die Eingangstransferfunktion. Die PS5 meldete
 im HDR-Anpassungsmenü PQ ohne gesetzte Mastering-Werte.
+
+## Automatisches VRR
+
+Schließe Aufnahmeprogramme vor dem Umschalten mit
+`sudo python3 gc553g2.py auto-vrr on` oder
+`sudo python3 gc553g2.py auto-vrr off`. Der Befehl prüft auf Firmware
+1.0.10.2 die im Windows-Mitschnitt beobachtete Geräteantwort. Die tatsächliche
+variable Bildrate am HDMI-Ausgang und ein separates Auslesen der Einstellung
+müssen noch geprüft werden.
 
 ## Audio, HDCP und RGB
 
@@ -132,7 +145,14 @@ sudo python3 gc553g2.py hdcp-detection
 sudo python3 gc553g2.py rgb status
 sudo python3 gc553g2.py rgb 00a0ff --brightness 30
 sudo python3 gc553g2.py rgb autonomous
+sudo python3 gc553g2.py rgb-effect rainbow-wave
 ```
+
+`rgb-effect --help` listet die 15 nativen Effekte. Wenn zuvor eine statische
+Farbe über LampArray gesetzt wurde, gibt `rgb autonomous` die Beleuchtung
+wieder an die Karte zurück. Die Effektbefehle verwenden die Parameter aus dem
+Windows-Mitschnitt. Die sichtbare Ausgabe unter Linux sowie Farbe, Tempo und
+Helligkeit der Effekte müssen noch geprüft werden.
 
 `audio` liest die Verstärkung für HDMI, Kopfhörer (`headphones`),
 Mikrofon (`microphone`) und Controller. Ein Kanalname mit Zahlenwert

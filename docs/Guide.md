@@ -67,9 +67,15 @@ Restoration validates the backup before accessing the device. If writing fails, 
 
 ## HDR input and HDR-to-SDR control
 
+`sudo python3 gc553g2.py hdmi-status` includes `hdmi_input.hdr_detected` when the input has locked. The flag comes from the receiver status observed when switching a PS5 between SDR and HDR. Use `hdr-metadata` for the input's transfer function.
+
 Run `sudo python3 gc553g2.py hdr-to-sdr` to read the device flag. Add `on` or `off` to set and verify it on firmware 1.0.10.2. Switching off, on, and back off was verified on the test card.
 
 `sudo python3 gc553g2.py hdr-metadata` reads the HDMI receiver's HDR metadata and reports the input transfer function when the InfoFrame is recognized. The PS5 reported PQ with no mastering values set. With a fixed PQ source image, switching the flag had no measurable effect on captured luma in NV12 or P010. V4L2 reported Rec.709 in both switch positions.
+
+## Automatic VRR
+
+Close capture applications before running `sudo python3 gc553g2.py auto-vrr on` or `sudo python3 gc553g2.py auto-vrr off`. On firmware 1.0.10.2 the command checks the acknowledgement observed in the Windows USB trace. The actual HDMI refresh behavior and any independent settings readback remain unverified.
 
 ## Audio, HDCP, and RGB
 
@@ -89,6 +95,8 @@ sudo python3 gc553g2.py rgb autonomous
 All four gain settings were read on the test card. Changing and restoring the HDMI gain, non-PCM setting, and HDCP detection were verified. The effect of mixer changes on the audio signal, Dolby Digital 5.1 capture, and analog party chat remain unverified on hardware. AVerMedia lists two-channel LPCM support. [AVerMedia 5.1 audio guide](https://www.avermedia.com/pk/support/faq/can-gc553g2-support-5-1-surround-sound)
 
 `rgb` accesses the LampArray interface through `hidraw` and uses the card's serial number to find the corresponding device node. Solid colors accept `--brightness` from 0 to 100 percent, with 100 percent as the default. `autonomous` returns lighting control to the card. The test card reported ten LEDs. Solid blue and the return to the card's effect were visually verified. Brightness scaling was tested with simulated HID reports.
+
+Run `sudo python3 gc553g2.py rgb-effect rainbow-wave` to request a native preset. Use `rgb-effect --help` for all 15 names. If you previously set a solid color via LampArray, run `rgb autonomous` first to return lighting control to the card. The preset reports use the parameters observed in the Windows trace. Linux LED output and adjustable preset colors, speed and brightness still need verification.
 
 ## Verified PS5 capture modes
 
